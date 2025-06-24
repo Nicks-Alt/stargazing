@@ -1,6 +1,7 @@
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
+const A2SHandler = require('./handlers/a2sHandler');
 require('dotenv').config();
 
 const client = new Client({
@@ -12,6 +13,9 @@ const client = new Client({
 });
 
 client.commands = new Collection();
+
+// Initialize A2S handler
+let a2sHandler = null;
 
 // Load commands
 const commandsPath = path.join(__dirname, 'commands');
@@ -50,6 +54,43 @@ client.once('ready', () => {
     console.log(`✅ Bot is ready! Logged in as ${client.user.tag}`);
     console.log(`🏠 Connected to ${client.guilds.cache.size} guild(s)`);
     console.log(`📋 Loaded ${client.commands.size} command(s)`);
+    
+    // Initialize and start A2S monitoring
+    a2sHandler = new A2SHandler(client);
+    a2sHandler.start();
+    
+    // Make A2S handler accessible to commands
+    client.a2sHandler = a2sHandler;
+});
+
+// Handle slash commands
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isChatInputCommand()) return;
+
+    const command = client.commands.get(interaction.commandName);
+    if (!command) return;
+
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error('❌ Error executing command:', error);
+        
+        const errorMessage = { content: 'There was an error while executing this command!', flags: 64 };
+        
+        if (interaction.replied || interaction.deferred) {
+            await interaction.editReply(errorMessage);
+        } else {
+            await interaction.reply(errorMessage);
+        }
+    }
+});
+
+// Handle button interactions
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isButton()) return;
+    
+    const { handleButtonInteraction } = require('./handlers/buttonHandler');
+    await handleButtonInteraction(interaction);
 });
 
 // Add error handling
@@ -59,6 +100,25 @@ client.on('error', error => {
 
 process.on('unhandledRejection', error => {
     console.error('❌ Unhandled promise rejection:', error);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+    console.log('🛑 Received SIGINT, shutting down gracefully...');
+    if (a2sHandler) {
+        a2sHandler.stop();
+    }
+    client.destroy();
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    console.log('🛑 Received SIGTERM, shutting down gracefully...');
+    if (a2sHandler) {
+        a2sHandler.stop();
+    }
+    client.destroy();
+    process.exit(0);
 });
 
 client.login(process.env.DISCORD_TOKEN);

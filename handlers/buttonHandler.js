@@ -42,15 +42,7 @@ async function handleApproval(interaction, userId, steamId) {
         }
 
         // Find the "Drifters" role
-        const driftersRole = guild.roles.cache.find(r => 
-            r.name.toLowerCase() === 'drifters'
-        );
-
-        if (!driftersRole) {
-            console.log('❌ Drifters role not found');
-            await safeEditReply(interaction, '❌ Drifters role not found in server!');
-            return;
-        }
+        const driftersRole = "1386113801555939408"
 
         // Add the Drifters role
         await member.roles.add(driftersRole);
@@ -67,7 +59,6 @@ async function handleApproval(interaction, userId, steamId) {
                 { name: 'Discord User', value: `${member.user.tag} (${userId})`, inline: true },
                 { name: 'Steam ID', value: steamId, inline: true },
                 { name: 'Status', value: '✅ Approved', inline: false },
-                { name: 'Role Assigned', value: driftersRole.name, inline: true },
                 { name: 'Approved By', value: interaction.user.tag, inline: true }
             )
             .setColor('#00ff00')

@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const axios = require('axios');
-const { addVerifiedUser, getVerifiedUser } = require('../utils/storage');
+const { addVerifiedUser, getVerifiedUser, getAllVerifiedUsers } = require('../utils/storage');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -101,6 +101,27 @@ module.exports = {
             }
         } else {
             console.log('📋 Using provided Steam64 ID');
+        }
+        
+        // Check if this Steam ID is already verified by another user
+        const allVerifiedUsers = getAllVerifiedUsers();
+        const steamIdAlreadyUsed = Object.values(allVerifiedUsers).find(user => user.steamId === steam64);
+        
+        if (steamIdAlreadyUsed) {
+            console.log(`⚠️ Steam ID ${steam64} is already verified by another user`);
+            
+            const steamIdInUseEmbed = new EmbedBuilder()
+                .setTitle('⚠️ Steam ID Already in Use!')
+                .setDescription('This Steam ID is already verified by another Discord user.')
+                .addFields(
+                    { name: 'Steam ID', value: steam64, inline: true },
+                    { name: 'Status', value: 'Already Verified', inline: true }
+                )
+                .setColor('#ff0000')
+                .setTimestamp();
+            
+            interaction.processing = false;
+            return interaction.editReply({ embeds: [steamIdInUseEmbed] });
         }
         
         try {
